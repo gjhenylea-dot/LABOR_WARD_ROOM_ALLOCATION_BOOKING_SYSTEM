@@ -1,7 +1,7 @@
 package org.example;
 
-import org.example.dao.DatabaseConnection;
-import org.example.ui.MenuUI;
+import org.example.dao.DatabaseInitializer;
+import org.example.ui.Authentication;
 
 public class Main {
 
@@ -10,11 +10,16 @@ public class Main {
         System.out.println("  Starting Labor Ward Room Allocation Booking System ");
         System.out.println("=====================================================");
 
-        // Initialize database tables (users, rooms, patients, allocations)
-        DatabaseConnection.initializeDatabase();
+        try {
+            // Initialize database tables, constraints, and seed defaults
+            DatabaseInitializer.initialize();
+        } catch (Exception e) {
+            System.err.println("Critical error initializing database: " + e.getMessage());
+            return;
+        }
 
-        // Launch the menu user interface
-        MenuUI menu = new MenuUI();
-        menu.start();
+        // Delegate authentication and UI routing
+        Authentication auth = new Authentication();
+        auth.start();
     }
 }

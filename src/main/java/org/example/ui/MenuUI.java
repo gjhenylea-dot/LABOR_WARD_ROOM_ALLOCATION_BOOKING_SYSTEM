@@ -5,113 +5,64 @@ import org.example.dao.UserDao;
 import org.example.model.User;
 
 import java.sql.*;
+import java.util.List;
 import java.util.Scanner;
 
 public class MenuUI {
     private final UserDao userDao = new UserDao();
     private final Scanner scanner = new Scanner(System.in);
 
-    public void start() {
-        // Ensure user table exists on startup
-        UserDao.initializeUserTable();
-
-        boolean running = true;
-        while (running) {
-            System.out.println("\n=====================================================");
-            System.out.println("   LABOR WARD ROOM ALLOCATION & BOOKING SYSTEM");
-            System.out.println("=====================================================");
-            System.out.println("1. Login");
-            System.out.println("2. Register New Staff Account");
-            System.out.println("3. Exit System");
-            System.out.print("Choose an option (1-3): ");
-
-            String choice = scanner.nextLine().trim();
-
-            switch (choice) {
-                case "1":
-                    loginUser();
-                    break;
-                case "2":
-                    registerUser();
-                    break;
-                case "3":
-                    System.out.println("Exiting system. Goodbye!");
-                    running = false;
-                    break;
-                default:
-                    System.out.println("Invalid option. Please choose between 1 and 3.");
+    // Required Formatted Table Renderer Helper Method
+    private void displayUserTable(List<User> users) {
+        System.out.printf("%-5s | %-15s | %-12s | %-10s%n", "ID", "Username", "Role", "Status");
+        System.out.println("---------------------------------------------------------");
+        if (users.isEmpty()) {
+            System.out.println("No accounts found.");
+        } else {
+            for (User u : users) {
+                System.out.printf("%-5d | %-15s | %-12s | %-10s%n",
+                        u.getId(),
+                        u.getUsername(),
+                        u.getRoles(),
+                        u.getStatus());
             }
         }
     }
 
-    private void loginUser() {
-        System.out.println("\n--- STAFF LOGIN ---");
-        System.out.print("Enter username: ");
-        String username = scanner.nextLine().trim();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine().trim();
-
-        User user = userDao.login(username, password);
-
-        if (user != null) {
-            System.out.println("\nLogin successful! Welcome, " + user.getUsername() + " (" + user.getRoles() + ")");
-            if ("ADMIN".equalsIgnoreCase(user.getRoles())) {
-                adminMenu(user);
-            } else {
-                staffMenu(user);
-            }
-        } else {
-            System.out.println("Login failed. Check your credentials or wait for admin approval.");
-        }
-    }
-
-    private void registerUser() {
-        System.out.println("\n--- STAFF REGISTRATION ---");
-        System.out.print("Choose a username: ");
-        String username = scanner.nextLine().trim();
-        System.out.print("Choose a password: ");
-        String password = scanner.nextLine().trim();
-        System.out.print("Enter Role (DOCTOR / NURSE / RECEPTIONIST): ");
-        String role = scanner.nextLine().trim().toUpperCase();
-
-        boolean success = userDao.register(username, password, role);
-        if (success) {
-            System.out.println("Registration submitted successfully! Your account status is PENDING admin approval.");
-        } else {
-            System.out.println("Registration failed. Username may already exist.");
-        }
-    }
-
-    private void adminMenu(User admin) {
+    public void adminMenu(User admin) {
         boolean session = true;
         while (session) {
             System.out.println("\n--- ADMIN PANEL (" + admin.getUsername() + ") ---");
-            System.out.println("1. View Room Status & Inventory");
-            System.out.println("2. Add New Labor Ward Room");
-            System.out.println("3. View Pending Staff Approvals");
-            System.out.println("4. Approve Pending Staff Accounts");
-            System.out.println("5. View All Active Allocations");
-            System.out.println("6. Logout");
-            System.out.print("Choose an option (1-6): ");
+            System.out.println("1. View All System Users");
+            System.out.println("2. View Pending Registrations");
+            System.out.println("3. Approve User Account");
+            System.out.println("4. View Room Status & Inventory");
+            System.out.println("5. Add New Labor Ward Room");
+            System.out.println("6. View All Active Allocations");
+            System.out.println("7. Logout");
+            System.out.print("Choose an option (1-7): ");
 
             String choice = scanner.nextLine().trim();
             switch (choice) {
                 case "1":
-                    viewAllRooms();
+                    viewAllUsers();
                     break;
                 case "2":
-                    addNewRoom();
-                    break;
-                case "3":
                     viewPendingUsers();
                     break;
-                case "4":
+                case "3":
                     approveUserAccount();
                     break;
+                case "4":
+                    viewAllRooms();
+                    break;
                 case "5":
-                    viewActiveAllocations();
+                    addNewRoom();
                     break;
                 case "6":
+                    viewActiveAllocations();
+                    break;
+                case "7":
                     System.out.println("Logging out...");
                     session = false;
                     break;
@@ -121,7 +72,60 @@ public class MenuUI {
         }
     }
 
-    private void staffMenu(User staff) {
+    private void viewAllUsers() {
+        System.out.println("\n--- ALL SYSTEM USERS ---");
+        List<User> users = userDao.getAllUsers();
+        displayUserTable(users);
+    }
+
+    private void viewPendingUsers() {
+        System.out.println("\n--- PENDING REGISTRATIONS ---");
+        List<User> pendingUsers = userDao.getPendingUsers();
+        displayUserTable(pendingUsers);
+    }
+
+    private void approveUserAccount() {
+        List<User> pendingUsers = userDao.getPendingUsers();
+        System.out.println("\n--- PENDING ACCOUNTS ---");
+        displayUserTable(pendingUsers);
+
+        if (pendingUsers.isEmpty()) {
+            return;
+        }
+
+        System.out.print("Enter Target User ID to APPROVE (Enter 0 to cancel): ");
+        String inputStr = scanner.nextLine().trim();
+
+        int userId;
+        try {
+            userId = Integer.parseInt(inputStr);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Cancellation or valid ID required.");
+            return;
+        }
+
+        // Input cancellation handling (0 to cancel)
+        if (userId == 0) {
+            System.out.println("Approval action cancelled.");
+            return;
+        }
+
+        // Verify ID exists in the pending list
+        boolean existsInPending = pendingUsers.stream().anyMatch(u -> u.getId() == userId);
+        if (!existsInPending) {
+            System.out.println("Error: User ID does not exist in the pending registrations list.");
+            return;
+        }
+
+        boolean success = userDao.approveUser(userId);
+        if (success) {
+            System.out.println("Success: User ID " + userId + " status updated from 'PENDING' to 'APPROVED'.");
+        } else {
+            System.out.println("Failed to approve user account.");
+        }
+    }
+
+    public void staffMenu(User staff) {
         boolean session = true;
         while (session) {
             System.out.println("\n--- LABOR WARD MANAGEMENT (" + staff.getRoles() + ": " + staff.getUsername() + ") ---");
@@ -159,8 +163,6 @@ public class MenuUI {
             }
         }
     }
-
-    // --- HELPER METHODS FOR SYSTEM FEATURES ---
 
     private void viewAllRooms() {
         String query = "SELECT * FROM rooms;";
@@ -224,46 +226,6 @@ public class MenuUI {
         }
     }
 
-    private void viewPendingUsers() {
-        String query = "SELECT id, username, roles FROM users WHERE status = 'PENDING';";
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            System.out.println("\n--- PENDING STAFF ACCOUNTS ---");
-            boolean found = false;
-            while (rs.next()) {
-                found = true;
-                System.out.printf("ID: %d | Username: %s | Role: %s%n",
-                        rs.getInt("id"), rs.getString("username"), rs.getString("roles"));
-            }
-            if (!found) {
-                System.out.println("No pending accounts found.");
-            }
-        } catch (SQLException e) {
-            System.out.println("Error fetching pending users: " + e.getMessage());
-        }
-    }
-
-    private void approveUserAccount() {
-        viewPendingUsers();
-        System.out.print("Enter User ID to APPROVE: ");
-        String idStr = scanner.nextLine().trim();
-
-        String sql = "UPDATE users SET status = 'ACTIVE' WHERE id = ?;";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, Integer.parseInt(idStr));
-            int affected = pstmt.executeUpdate();
-            if (affected > 0) {
-                System.out.println("User account approved and activated successfully!");
-            } else {
-                System.out.println("User ID not found.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error approving user: " + e.getMessage());
-        }
-    }
-
     private void registerPatient() {
         System.out.println("\n--- REGISTER NEW PATIENT ---");
         System.out.print("Full Name: ");
@@ -288,7 +250,6 @@ public class MenuUI {
 
     private void allocateRoom() {
         System.out.println("\n--- ALLOCATE ROOM / BOOKING ---");
-        // Show patients
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT patient_id, full_name FROM patients;")) {
@@ -312,7 +273,7 @@ public class MenuUI {
         String updateRoom = "UPDATE rooms SET status = 'OCCUPIED' WHERE room_id = ?;";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false); // Transaction start
+            conn.setAutoCommit(false);
 
             try (PreparedStatement stmt1 = conn.prepareStatement(insertAllocation);
                  PreparedStatement stmt2 = conn.prepareStatement(updateRoom)) {
@@ -372,7 +333,6 @@ public class MenuUI {
         System.out.print("Enter Allocation ID to Discharge: ");
         int allocId = Integer.parseInt(scanner.nextLine().trim());
 
-        // Find room_id for this allocation so we can free it up
         String findRoomSql = "SELECT room_id FROM allocations WHERE allocation_id = ? AND status = 'ACTIVE';";
         String updateAllocSql = "UPDATE allocations SET status = 'DISCHARGED' WHERE allocation_id = ?;";
         String updateRoomSql = "UPDATE rooms SET status = 'AVAILABLE' WHERE room_id = ?;";
