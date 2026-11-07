@@ -78,6 +78,18 @@ public class DatabaseInitializer {
                     System.out.println("-> Default Labor Ward Admin created (username: admin, password: admin123).");
                 }
             }
+
+            // 5. Initialize Activity Logs Table (Deliverable 8 Requirement)
+            statement.execute("""
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    action_type TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                );
+            """);
         }
 
         System.out.println("-> Labor Ward database and tables initialized successfully.");
