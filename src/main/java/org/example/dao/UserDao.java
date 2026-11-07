@@ -28,6 +28,7 @@ public class UserDao {
     }
 
     public User login(String username, String password) {
+        // Fixed: Added "FROM users" to the query string
         String sql = "SELECT id, username, password, roles, status FROM users WHERE username = ? AND password = ?;";
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -57,7 +58,6 @@ public class UserDao {
         return null;
     }
 
-    // Required: getAllUsers()
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
         String sql = "SELECT id, username, password, roles, status FROM users;";
@@ -79,7 +79,6 @@ public class UserDao {
         return users;
     }
 
-    // Required: getPendingUsers()
     public List<User> getPendingUsers() {
         List<User> users = new ArrayList<>();
         String sql = "SELECT id, username, password, roles, status FROM users WHERE status = 'PENDING';";
@@ -101,7 +100,6 @@ public class UserDao {
         return users;
     }
 
-    // Required: approveUser(int userId)
     public boolean approveUser(int userId) {
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?;";
         try (Connection connection = DatabaseConnection.getConnection();
@@ -111,6 +109,23 @@ public class UserDao {
             return affected > 0;
         } catch (SQLException e) {
             System.out.println("Error approving user: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+        String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?;";
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            pstmt.setString(1, newRole.toUpperCase());
+            pstmt.setString(2, newStatus.toUpperCase());
+            pstmt.setInt(3, userId);
+
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.out.println("Error updating user role and status: " + e.getMessage());
             return false;
         }
     }
