@@ -91,6 +91,11 @@ public class MenuUI {
                     break;
                 case "9":
                     System.out.println("Logging out...");
+                    activityLogDao.logAction(
+                            admin.getId(),
+                            "USER_LOGOUT",
+                            "Admin " + admin.getUsername() + " logged out of the system."
+                    );
                     session = false;
                     break;
                 default:
@@ -240,7 +245,6 @@ public class MenuUI {
         }
     }
 
-    // --- RESTORED MISSING METHODS ---
     private void viewAllUsers() {
         System.out.println("\n--- ALL SYSTEM USERS ---");
         List<User> users = userDao.getAllUsers();
@@ -252,7 +256,6 @@ public class MenuUI {
         List<User> pendingUsers = userDao.getPendingUsers();
         displayUserTable(pendingUsers);
     }
-    // ---------------------------------
 
     public void staffMenu(User staff) {
         boolean session = true;
@@ -285,6 +288,11 @@ public class MenuUI {
                     break;
                 case "6":
                     System.out.println("Logging out...");
+                    activityLogDao.logAction(
+                            staff.getId(),
+                            "USER_LOGOUT",
+                            "Staff " + staff.getUsername() + " logged out of the system."
+                    );
                     session = false;
                     break;
                 default:

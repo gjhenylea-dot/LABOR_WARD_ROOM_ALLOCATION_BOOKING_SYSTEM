@@ -1,5 +1,6 @@
 package org.example.ui;
 
+import org.example.dao.ActivityLogDao;
 import org.example.dao.UserDao;
 import org.example.model.User;
 
@@ -7,6 +8,7 @@ import java.util.Scanner;
 
 public class Authentication {
     private final UserDao userDao = new UserDao();
+    private final ActivityLogDao activityLogDao = new ActivityLogDao(); // Bag-ong gidugang
     private final Scanner scanner = new Scanner(System.in);
     private final MenuUI menuUI = new MenuUI();
 
@@ -51,6 +53,14 @@ public class Authentication {
 
         if (user != null) {
             System.out.println("\nLogin successful! Welcome, " + user.getUsername() + " (" + user.getRoles() + ")");
+
+            // --- GIDUGANG: Auto-logging para sa Login ---
+            activityLogDao.logAction(
+                    user.getId(),
+                    "USER_LOGIN",
+                    "User " + user.getUsername() + " successfully logged into the system."
+            );
+
             if ("ADMIN".equalsIgnoreCase(user.getRoles())) {
                 menuUI.adminMenu(user);
             } else {
